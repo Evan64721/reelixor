@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineVault</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#111722;
+      --panel2:#0f141c;
+      --line:#243041;
+      --text:#eef3ff;
+      --muted:#93a4bd;
+      --accent:#f43f5e;
+      --accent2:#2563eb;
+      --good:#22c55e;
+      --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(180deg,#090d12,#0b0f14 35%,#0b0f14);color:var(--text)}
+    .app{display:grid;grid-template-columns:260px 1fr 360px;min-height:100vh}
+    aside{background:rgba(10,14,20,.96);border-right:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:16px}
+    .brand{font-size:22px;font-weight:800;letter-spacing:.5px}
+    .nav button,.topbar button,.btn{width:100%;padding:12px 14px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;cursor:pointer;text-align:left}
+    .nav button.active,.btn.primary,.topbar button.primary{background:linear-gradient(135deg,var(--accent),#b91c1c);border-color:transparent}
+    .nav{display:grid;gap:10px}
+    .small{color:var(--muted);font-size:13px;line-height:1.5}
+    main{padding:18px;display:grid;grid-template-rows:auto auto 1fr;gap:16px}
+    .topbar{display:grid;grid-template-columns:1fr 160px 160px;gap:10px}
+    .topbar input,.topbar select,.field input,.field textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+    .hero{background:linear-gradient(135deg,rgba(36,48,65,.85),rgba(17,23,34,.95));border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;grid-template-columns:1.4fr .8fr;gap:18px;align-items:end}
+    .hero h1{margin:0 0 8px;font-size:30px}
+    .hero p{margin:0;color:var(--muted)}
+    .hero .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;align-content:start}
+    .card{background:var(--panel2);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;transition:.15s transform,.15s border-color}
+    .card:hover{transform:translateY(-2px);border-color:#3c4d66}
+    .poster{height:280px;background:#1c2633 center/cover no-repeat;position:relative}
+    .badge{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);padding:6px 10px;border-radius:999px;font-size:12px}
+    .badge.good{background:rgba(34,197,94,.18);color:#86efac}
+    .badge.warn{background:rgba(245,158,11,.18);color:#fcd34d}
+    .meta{padding:12px}
+    .meta strong{display:block;font-size:15px;margin-bottom:6px}
+    .meta .sub{color:var(--muted);font-size:13px}
+    .panel{background:rgba(15,20,28,.96);border-left:1px solid var(--line);padding:18px;display:grid;gap:14px;align-content:start}
+    .section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .section h3{margin:0 0 12px}
+    .field{display:grid;gap:8px;margin-bottom:12px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    textarea{min-height:88px;resize:vertical}
+    .btnrow{display:flex;gap:10px;flex-wrap:wrap}
+    .btnrow .btn{flex:1;min-width:120px;text-align:center}
+    video{width:100%;max-height:270px;border-radius:14px;background:#000}
+    .nowplaying{color:var(--muted);font-size:14px}
+    .hidden{display:none !important}
+    @media (max-width:1100px){
+      .app{grid-template-columns:220px 1fr}
+      .panel{grid-column:1 / -1;border-left:none;border-top:1px solid var(--line)}
+    }
+    @media (max-width:760px){
+      .app{grid-template-columns:1fr}
+      aside,.panel{border-right:none;border-left:none}
+      .topbar,.hero,.row{grid-template-columns:1fr}
+      .hero{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">CineVault</div>
+      <div class="small">Emby-style library layout with watch, download status, metadata, and JSON import/export.</div>
+      <div class="nav" id="nav">
+        <button class="active" data-filter="all">All Movies</button>
+        <button data-filter="downloaded">Downloaded</button>
+        <button data-filter="notdownloaded">Not Downloaded</button>
+        <button data-filter="favorites">Favorites</button>
+      </div>
+      <div class="section">
+        <h3>Library Info</h3>
+        <div class="small" id="stats"></div>
+      </div>
+      <div class="section">
+        <h3>Backup</h3>
+        <div class="btnrow">
+          <button class="btn primary" id="exportBtn">Download JSON</button>
+          <label class="btn" style="text-align:center;cursor:pointer;">
+            Import JSON
+            <input id="importFile" type="file" accept="application/json" class="hidden">
+          </label>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <input id="search" placeholder="Search movies, genre, year..." />
+        <select id="sort">
+          <option value="title">Sort: Title</option>
+          <option value="year">Sort: Year</option>
+          <option value="recent">Sort: Recently Added</option>
+        </select>
+        <button class="primary" id="clearBtn">Clear Player</button>
+      </div>
+
+      <div class="hero">
+        <div>
+          <h1>Watch your library</h1>
+          <p>Upload a movie file, save metadata, and play it right here. Downloaded items are tagged for offline use.</p>
+          <div class="actions">
+            <button class="btn primary" id="demoBtn" style="max-width:170px;">Load Demo Library</button>
+          </div>
+        </div>
+        <div class="section">
+          <h3 style="margin-top:0;">Add Movie</h3>
+          <div class="field"><input id="title" placeholder="Title"></div>
+          <div class="row">
+            <div class="field"><input id="year" type="number" placeholder="Year"></div>
+            <div class="field"><input id="genre" placeholder="Genre"></div>
+          </div>
+          <div class="field"><input id="poster" placeholder="Poster image URL"></div>
+          <div class="field"><input id="file" type="file" accept="video/*"></div>
+          <div class="btnrow">
+            <button class="btn primary" id="addBtn">Save Movie</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+    </main>
+
+    <div class="panel">
+      <div class="section">
+        <h3 style="margin-top:0;">Player</h3>
+        <video id="player" controls playsinline></video>
+        <div class="nowplaying" id="nowPlaying">No movie loaded.</div>
+      </div>
+      <div class="section">
+        <h3 style="margin-top:0;">Details</h3>
+        <div id="details" class="small">Select a movie to view details.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const KEY = "cinevault_library_v2";
+    let movies = JSON.parse(localStorage.getItem(KEY) || "[]");
+    let filter = "all";
+    let currentObjectUrl = "";
+
+    const $ = id => document.getElementById(id);
+
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify(movies));
+      render();
+      updateStats();
+    }
+
+    function updateStats() {
+      const total = movies.length;
+      const downloaded = movies.filter(m => m.downloaded).length;
+      const favs = movies.filter(m => m.favorite).length;
+      $("stats").innerHTML = `Movies: <b>${total}</b><br>Downloaded: <b>${downloaded}</b><br>Favorites: <b>${favs}</b>`;
+    }
+
+    function matches(movie) {
+      if (filter === "downloaded") return movie.downloaded;
+      if (filter === "notdownloaded") return !movie.downloaded;
+      if (filter === "favorites") return !!movie.favorite;
+      return true;
+    }
+
+    function playMovie(movie) {
+      if (!movie.videoData) {
+        $("nowPlaying").textContent = `${movie.title} has no video file attached.`;
+        return;
+      }
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      fetch(movie.videoData)
+        .then(r => r.blob())
+        .then(blob => {
+          currentObjectUrl = URL.createObjectURL(blob);
+          $("player").src = currentObjectUrl;
+          $("player").play();
+          $("nowPlaying").textContent = `Now playing: ${movie.title}`;
+          showDetails(movie);
+        });
+    }
+
+    function showDetails(movie) {
+      $("details").innerHTML = `
+        <div><b>${movie.title}</b></div>
+        <div class="small">${movie.year || ""} • ${movie.genre || ""}</div>
+        <div class="small" style="margin-top:8px;">${movie.synopsis || "No synopsis added."}</div>
+        <div class="small" style="margin-top:8px;">File: ${movie.fileName || "None"}</div>
+        <div class="small">Status: ${movie.downloaded ? "Downloaded" : "Not downloaded"}${movie.favorite ? " • Favorite" : ""}</div>
+      `;
+    }
+
+    function render() {
+      const q = $("search").value.trim().toLowerCase();
+      const sort = $("sort").value;
+      let list = movies.filter(m => matches(m) && (
+        !q || [m.title, m.genre, String(m.year), m.synopsis].join(" ").toLowerCase().includes(q)
+      ));
+
+      list.sort((a, b) => {
+        if (sort === "year") return (b.year || 0) - (a.year || 0);
+        if (sort === "recent") return new Date(b.addedAt || 0) - new Date(a.addedAt || 0);
+        return String(a.title || "").localeCompare(String(b.title || ""));
+      });
+
+      const grid = $("grid");
+      grid.innerHTML = "";
+      if (!list.length) {
+        grid.innerHTML = '<div class="small">No movies found.</div>';
+        return;
+      }
+
+      list.forEach(movie => {
+        const card = document.createElement("div");
+        card.className = "card" + (movie.downloaded ? " downloaded" : "");
+        card.innerHTML = `
+          <div class="poster" style="background-image:url('${movie.poster || ""}')">
+            <div class="badge ${movie.downloaded ? "good" : "warn"}">${movie.downloaded ? "Downloaded" : "Library"}</div>
+          </div>
+          <div class="meta">
+            <strong>${movie.title || "Untitled"}</strong>
+            <div class="sub">${movie.year || ""} • ${movie.genre || ""}</div>
+            <div class="sub">${movie.favorite ? "★ Favorite" : ""}</div>
+          </div>
+        `;
+        card.onclick = () => {
+          showDetails(movie);
+          playMovie(movie);
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    $("addBtn").onclick = () => {
+      const file = $("file").files[0];
+      const movie = {
+        id: crypto.randomUUID(),
+        title: $("title").value.trim(),
+        year: Number($("year").value) || "",
+        genre: $("genre").value.trim(),
+        poster: $("poster").value.trim(),
+        synopsis: "",
+        fileName: file ? file.name : "",
+        videoData: "",
+        downloaded: !!file,
+        favorite: false,
+        addedAt: new Date().toISOString()
+      };
+
+      const finish = () => {
+        movies.unshift(movie);
+        $("title").value = "";
+        $("year").value = "";
+        $("genre").value = "";
+        $("poster").value = "";
+        $("file").value = "";
+        save();
+        showDetails(movie);
+      };
+
+      if (file) {
+        movie.videoData = URL.createObjectURL(file);
+        finish();
+      } else {
+        finish();
+      }
+    };
+
+    $("nav").onclick = e => {
+      if (e.target.dataset.filter) {
+        filter = e.target.dataset.filter;
+        [...$("nav").querySelectorAll("button")].forEach(b => b.classList.remove("active"));
+        e.target.classList.add("active");
+        render();
+      }
+    };
+
+    $("search").oninput = render;
+    $("sort").onchange = render;
+
+    $("clearBtn").onclick = () => {
+      $("player").removeAttribute("src");
+      $("player").load();
+      $("nowPlaying").textContent = "No movie loaded.";
+      $("details").textContent = "Select a movie to view details.";
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = "";
+    };
+
+    $("exportBtn").onclick = () => {
+      const blob = new Blob([JSON.stringify({ movies }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cinevault-library.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    $("importFile").onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          movies = Array.isArray(data) ? data : (data.movies || []);
+          save();
+        } catch {
+          alert("Invalid JSON file");
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    $("demoBtn").onclick = () => {
+      movies = [
+        { id: crypto.randomUUID(), title: "Inception", year: 2010, genre: "Sci-Fi", poster: "", synopsis: "A skilled thief enters dreams to plant an idea.", fileName: "", videoData: "", downloaded: false, favorite: true, addedAt: new Date().toISOString() },
+        { id: crypto.randomUUID(), title: "The Dark Knight", year: 2008, genre: "Action", poster: "", synopsis: "Batman faces a criminal mastermind in Gotham.", fileName: "", videoData: "", downloaded: true, favorite: false, addedAt: new Date().toISOString() }
+      ];
+      save();
+    };
+
+    render();
+    updateStats();
+  </script>
+</body>
+</html>
