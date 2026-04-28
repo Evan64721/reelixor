@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CineVault</title>
+  <title>Reelixor</title>
   <style>
     :root{
       --bg:#0b0f14;
@@ -69,12 +69,10 @@
 <body>
   <div class="app">
     <aside>
-      <div class="brand">CineVault</div>
-      <div class="small">Emby-style library layout with watch, download status, metadata, and JSON import/export.</div>
+      <div class="brand">Reelixor</div>
       <div class="nav" id="nav">
         <button class="active" data-filter="all">All Movies</button>
         <button data-filter="downloaded">Downloaded</button>
-        <button data-filter="notdownloaded">Not Downloaded</button>
         <button data-filter="favorites">Favorites</button>
       </div>
       <div class="section">
@@ -300,7 +298,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "cinevault-library.json";
+      a.download = "Reelixor-library.json";
       a.click();
       URL.revokeObjectURL(url);
     };
