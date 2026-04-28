@@ -105,7 +105,7 @@
       <div class="hero">
         <div>
           <h1>Watch your library</h1>
-          <p>Upload a movie file, save metadata, and play it right here. Downloaded items are tagged for offline use.</p>
+          <p>Upload a movie file, save metadata, and play it right here.</p>
           <div class="actions">
             <button class="btn primary" id="demoBtn" style="max-width:170px;">Load Demo Library</button>
           </div>
@@ -145,7 +145,6 @@
     const KEY = "Reelixor_library_v2";
     let movies = JSON.parse(localStorage.getItem(KEY) || "[]");
     let filter = "all";
-    let currentObjectUrl = "";
 
     const $ = id => document.getElementById(id);
 
@@ -164,26 +163,26 @@
 
     function matches(movie) {
       if (filter === "downloaded") return movie.downloaded;
-      if (filter === "notdownloaded") return !movie.downloaded;
       if (filter === "favorites") return !!movie.favorite;
       return true;
     }
 
+    // ✅ FIXED FUNCTION
     function playMovie(movie) {
       if (!movie.videoData) {
         $("nowPlaying").textContent = `${movie.title} has no video file attached.`;
         return;
       }
-      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-      fetch(movie.videoData)
-        .then(r => r.blob())
-        .then(blob => {
-          currentObjectUrl = URL.createObjectURL(blob);
-          $("player").src = currentObjectUrl;
-          $("player").play();
-          $("nowPlaying").textContent = `Now playing: ${movie.title}`;
-          showDetails(movie);
-        });
+
+      $("player").src = movie.videoData;
+      $("player").load();
+
+      $("player").play().catch(() => {
+        $("nowPlaying").textContent = "Click play to start the video.";
+      });
+
+      $("nowPlaying").textContent = `Now playing: ${movie.title}`;
+      showDetails(movie);
     }
 
     function showDetails(movie) {
@@ -218,7 +217,7 @@
 
       list.forEach(movie => {
         const card = document.createElement("div");
-        card.className = "card" + (movie.downloaded ? " downloaded" : "");
+        card.className = "card";
         card.innerHTML = `
           <div class="poster" style="background-image:url('${movie.poster || ""}')">
             <div class="badge ${movie.downloaded ? "good" : "warn"}">${movie.downloaded ? "Downloaded" : "Library"}</div>
@@ -247,29 +246,20 @@
         poster: $("poster").value.trim(),
         synopsis: "",
         fileName: file ? file.name : "",
-        videoData: "",
+        videoData: file ? URL.createObjectURL(file) : "",
         downloaded: !!file,
         favorite: false,
         addedAt: new Date().toISOString()
       };
 
-      const finish = () => {
-        movies.unshift(movie);
-        $("title").value = "";
-        $("year").value = "";
-        $("genre").value = "";
-        $("poster").value = "";
-        $("file").value = "";
-        save();
-        showDetails(movie);
-      };
-
-      if (file) {
-        movie.videoData = URL.createObjectURL(file);
-        finish();
-      } else {
-        finish();
-      }
+      movies.unshift(movie);
+      $("title").value = "";
+      $("year").value = "";
+      $("genre").value = "";
+      $("poster").value = "";
+      $("file").value = "";
+      save();
+      showDetails(movie);
     };
 
     $("nav").onclick = e => {
@@ -289,40 +279,11 @@
       $("player").load();
       $("nowPlaying").textContent = "No movie loaded.";
       $("details").textContent = "Select a movie to view details.";
-      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-      currentObjectUrl = "";
-    };
-
-    $("exportBtn").onclick = () => {
-      const blob = new Blob([JSON.stringify({ movies }, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Reelixor-library.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    $("importFile").onchange = e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = JSON.parse(reader.result);
-          movies = Array.isArray(data) ? data : (data.movies || []);
-          save();
-        } catch {
-          alert("Invalid JSON file");
-        }
-      };
-      reader.readAsText(file);
     };
 
     $("demoBtn").onclick = () => {
       movies = [
-        { id: crypto.randomUUID(), title: "Inception", year: 2010, genre: "Sci-Fi", poster: "", synopsis: "A skilled thief enters dreams to plant an idea.", fileName: "", videoData: "", downloaded: false, favorite: true, addedAt: new Date().toISOString() },
-        { id: crypto.randomUUID(), title: "The Dark Knight", year: 2008, genre: "Action", poster: "", synopsis: "Batman faces a criminal mastermind in Gotham.", fileName: "", videoData: "", downloaded: true, favorite: false, addedAt: new Date().toISOString() }
+        { id: crypto.randomUUID(), title: "Inception", year: 2010, genre: "Sci-Fi", poster: "", synopsis: "A skilled thief enters dreams.", fileName: "", videoData: "", downloaded: false, favorite: true, addedAt: new Date().toISOString() }
       ];
       save();
     };
